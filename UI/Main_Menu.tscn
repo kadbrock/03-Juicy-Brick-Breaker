@@ -1,6 +1,78 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://UI/Main_Menu.gd" type="Script" id=1]
+[ext_resource path="res://UI/theme.tres" type="Theme" id=2]
+
+[sub_resource type="Shader" id=1]
+code = "/*
+	Floating Bubbles by PmkExpert
+	Create floating and colliding bubbles using worley and color them with a gradient
+
+	MIT License
+*/
+
+shader_type canvas_item;
+
+uniform float speed = .5; //How fast the bubbles move
+uniform sampler2D gradient; //The gradient texture used to color the bubbles; if it's repeated, it should start and end with the same color
+uniform vec4 background_color : hint_color = vec4(0.0, 0.0, 0.0, 1.0);
+uniform vec2 grid_vec = vec2(2.0, 2.0); //How to repeat the gradient
+uniform vec2 grid_bubbles = vec2(20.0, 10.0); //How many bubbles; can also make them oval
+
+vec2 random(vec2 uv) {
+	return vec2(fract(sin(dot(uv.xy,
+		vec2(12.9898,78.233))) * 43758.5453123));
+}
+
+float worley(vec2 uv, float columns, float rows) {
+	
+	vec2 index_uv = floor(vec2(uv.x * columns, uv.y * rows));
+	vec2 fract_uv = fract(vec2(uv.x * columns, uv.y * rows));
+	
+	float minimum_dist = 1.0;  
+	
+	for (int y= -1; y <= 1; y++) {
+		for (int x= -1; x <= 1; x++) {
+			vec2 neighbor = vec2(float(x),float(y));
+			vec2 point = random(index_uv + neighbor);
+			point = vec2( cos(TIME * point.x * speed), sin(TIME * point.y * speed) ) * 0.5 + 0.5;
+			vec2 diff = neighbor + point - fract_uv;
+			float dist = length(diff);
+			minimum_dist = min(minimum_dist, dist);
+		}
+	}
+	
+	return minimum_dist;
+}
+
+vec2 grid(vec2 uv, float columns, float rows){
+	return fract(vec2(uv.x * columns, uv.y * rows));
+}
+
+void fragment() {
+	vec2 repeat = grid(SCREEN_UV, grid_vec.x, grid_vec.y); //Divide in grid, used to repeat the gradient
+	float worley = worley(SCREEN_UV, grid_bubbles.x, grid_bubbles.y); //Create bubbles
+	vec4 multi_color = texture(gradient, vec2(repeat.y, worley)); //Use gradient colors; you can change to repeat.x for a horizontal repeat
+	//You can change the float values here to modify the bubbles; don't ask for a mathematical explanation, I don't know
+	COLOR.rgb = mix(vec3(worley) * multi_color.rgb * 3.0, background_color.rgb , smoothstep(0.4, 0.5, worley * 1.5)); //The weight controls the bubbles' rim and size
+	COLOR.a = texture(TEXTURE, UV).a; //Preserve the original texture's transparency
+}"
+
+[sub_resource type="Gradient" id=3]
+offsets = PoolRealArray( 0, 0.49635, 0.875912 )
+colors = PoolColorArray( 1, 0, 0, 1, 0.195313, 1, 0, 1, 0, 0.0804631, 0.605839, 1 )
+
+[sub_resource type="GradientTexture2D" id=4]
+gradient = SubResource( 3 )
+fill_from = Vector2( 0.00526316, 0 )
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/speed = 0.7
+shader_param/background_color = Color( 0, 0, 0, 1 )
+shader_param/grid_vec = Vector2( 2, 2 )
+shader_param/grid_bubbles = Vector2( 20, 10 )
+shader_param/gradient = SubResource( 4 )
 
 [node name="Main_Menu" type="Control"]
 anchor_right = 1.0
@@ -8,6 +80,7 @@ anchor_bottom = 1.0
 script = ExtResource( 1 )
 
 [node name="Background" type="ColorRect" parent="."]
+material = SubResource( 2 )
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color( 0, 0, 0, 0.501961 )
@@ -16,6 +89,7 @@ color = Color( 0, 0, 0, 0.501961 )
 anchor_right = 1.0
 anchor_bottom = 1.0
 margin_bottom = -300.0
+theme = ExtResource( 2 )
 text = "Brick Breaker"
 align = 1
 valign = 1
@@ -29,6 +103,7 @@ margin_left = -100.0
 margin_top = -20.0
 margin_right = 100.0
 margin_bottom = 20.0
+theme = ExtResource( 2 )
 text = "Play"
 
 [node name="Quit" type="Button" parent="."]
@@ -40,6 +115,7 @@ margin_left = -100.0
 margin_top = 50.0
 margin_right = 100.0
 margin_bottom = 90.0
+theme = ExtResource( 2 )
 text = "Quit"
 
 [connection signal="pressed" from="Play" to="." method="_on_Play_pressed"]

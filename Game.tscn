@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=2]
+[gd_scene load_steps=20 format=2]
 
 [ext_resource path="res://Brick/Brick_Container.gd" type="Script" id=1]
 [ext_resource path="res://Paddle/Paddle.tscn" type="PackedScene" id=2]
@@ -9,6 +9,56 @@
 [ext_resource path="res://UI/HUD.tscn" type="PackedScene" id=7]
 [ext_resource path="res://UI/Instructions.tscn" type="PackedScene" id=8]
 [ext_resource path="res://Effects/Fever.gd" type="Script" id=9]
+[ext_resource path="res://Assets/Metal Hit.mp3" type="AudioStream" id=10]
+[ext_resource path="res://Assets/198868__hitrison__door-thudwhamwhack.wav" type="AudioStream" id=11]
+[ext_resource path="res://Assets/Bitbasic - Some sort of thrive.mp3" type="AudioStream" id=12]
+[ext_resource path="res://Assets/345689__inspectorj__comedic-boing-a.wav" type="AudioStream" id=13]
+[ext_resource path="res://Assets/414209__jacksonacademyashmore__death.wav" type="AudioStream" id=14]
+[ext_resource path="res://Effects/Comet_Container.gd" type="Script" id=15]
+
+[sub_resource type="Shader" id=3]
+code = "//	Starfield shader by Brian Smith (steampunkdemon.itch.io)
+//	MIT licence
+
+shader_type canvas_item;
+
+const vec2 texture_dimensions = vec2(1024.0, 600.0); // Resolution of texture in pixels.
+const vec2 star_dimensions = vec2(2.0, 2.0); // Size of a star in pixels based on texture_dimensions. Stars will only render to a maximum height of texture_dimensions.y / stars for horizontally scrolling stars or width of texture_dimensions.x / stars for vertically scrolling stars.
+const float stars = 200.0; // Number of stars (rows for horizontally scrolling stars, columns for vertically scrolling stars).
+const vec3 star_color = vec3(1.0, 1.0, 1.0);
+const float base_scroll_speed = 20.0; // The higher the value the slower the scroll. Must be larger than 0.0 and additional_scroll_speed.
+const float additional_scroll_speed = 15.0; // The higher the value the faster the scroll. Must be larger than 0.0 but smaller than base_scroll_speed.
+const float preprocess = base_scroll_speed * (base_scroll_speed - additional_scroll_speed) * 3.0; // Spreads out the stars so they cover the texture from the start.
+//	For horizontally scrolling stars:
+const vec2 adjusted_star_dimensions = vec2(1.0 / texture_dimensions.x * star_dimensions.x, 1.0 / texture_dimensions.y * star_dimensions.y * stars);
+//	For vertically scrolling stars:
+//	const vec2 adjusted_star_dimensions = vec2(1.0 / texture_dimensions.x * star_dimensions.x * stars, 1.0 / texture_dimensions.y * star_dimensions.y);
+
+float greater_than(float x, float y) {
+	return max(sign(x - y), 0.0);
+}
+
+void fragment() {
+//	Uncomment the following line if you are applying the shader to a TextureRect:
+//	COLOR = texture(TEXTURE,UV);
+
+//	Horizontally scrolling stars:
+	float random_value = fract(sin(dot(floor(UV * vec2(1.0, stars)), vec2(12.9898,78.233))) * 43758.5453123);
+//	If you are happy for the stars to be the full height of a row (texture_dimensions.y / stars) you can replace the following line of code with:
+//	COLOR.rgb = mix(COLOR.rgb, star_color, random_value * greater_than(adjusted_star_dimensions.x, mod(UV.x + (preprocess + TIME) / (base_scroll_speed - random_value * additional_scroll_speed), 1.0)));
+//	To make the stars scroll from left to right change 'mod(UV.x + (preprocess + TIME)' to 'mod(UV.x - (preprocess + TIME)'.
+	COLOR.rgb = mix(COLOR.rgb, star_color, random_value * greater_than(adjusted_star_dimensions.x, mod(UV.x + (preprocess + TIME) / (base_scroll_speed - random_value * additional_scroll_speed), 1.0)) * greater_than(adjusted_star_dimensions.y, fract(UV.y * stars)));
+
+//	Vertically scrolling stars:
+//	float random_value = fract(sin(dot(floor(UV * vec2(stars, 1.0)), vec2(12.9898,78.233))) * 43758.5453123);
+//	If you are happy for the stars to be the full width of a column (texture_dimensions.x / stars) you can replace the following line of code with:
+//	COLOR.rgb = mix(COLOR.rgb, star_color, random_value * greater_than(adjusted_star_dimensions.y, mod(UV.y + (preprocess + TIME) / (base_scroll_speed - random_value * additional_scroll_speed), 1.0)));
+//	To make the stars scroll from bottom to top change 'mod(UV.y - (preprocess + TIME)' to 'mod(UV.y + (preprocess + TIME)'.
+//	COLOR.rgb = mix(COLOR.rgb, star_color, random_value * greater_than(adjusted_star_dimensions.y, mod(UV.y - (preprocess + TIME) / (base_scroll_speed - random_value * additional_scroll_speed), 1.0)) * greater_than(adjusted_star_dimensions.x, fract(UV.x * stars)));
+}"
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 3 )
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 100, 500 )
@@ -18,6 +68,17 @@ extents = Vector2( 612, 100 )
 
 [node name="Game" type="Node2D"]
 script = ExtResource( 4 )
+
+[node name="ColorRect" type="ColorRect" parent="."]
+material = SubResource( 4 )
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_right = 1024.0
+margin_bottom = 800.0
+color = Color( 0, 0, 0, 1 )
+
+[node name="Comet_Container" type="Node2D" parent="."]
+script = ExtResource( 15 )
 
 [node name="Wall_Container" type="Node2D" parent="."]
 
@@ -29,6 +90,7 @@ margin_left = -190.0
 margin_top = -100.0
 margin_right = 10.0
 margin_bottom = 900.0
+color = Color( 0.301961, 1, 0.427451, 1 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Wall_Container/Wall_Left"]
 position = Vector2( -90, 400 )
@@ -43,6 +105,7 @@ margin_left = -10.0
 margin_top = -100.0
 margin_right = 190.0
 margin_bottom = 900.0
+color = Color( 1, 0.913725, 0, 1 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Wall_Container/Wall_Right"]
 position = Vector2( 90, 400 )
@@ -56,6 +119,7 @@ margin_left = -100.0
 margin_top = -190.0
 margin_right = 1124.0
 margin_bottom = 10.0
+color = Color( 0.592157, 0, 1, 1 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Wall_Container/Wall_Top"]
 position = Vector2( 512, -90 )
@@ -90,5 +154,26 @@ visible = false
 
 [node name="Instructions" parent="UI" instance=ExtResource( 8 )]
 pause_mode = 2
+
+[node name="Music" type="AudioStreamPlayer2D" parent="."]
+pause_mode = 2
+stream = ExtResource( 12 )
+volume_db = -6.19
+autoplay = true
+
+[node name="Paddle_Audio" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 13 )
+volume_db = 3.714
+
+[node name="Wall_Audio" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 11 )
+volume_db = -6.19
+
+[node name="Brick_Audio" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 10 )
+volume_db = -12.381
+
+[node name="Ball_Audio" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 14 )
 
 [connection signal="timeout" from="Fever/Timer" to="Fever" method="_on_Timer_timeout"]
